@@ -59,7 +59,7 @@ def gabor_wavelet_space_2d(n,sigma,zeta,eta,theta,a,m):
 
 def gabor_wavelet_family_space_2d(n,K,Q,S,sigma,zeta,eta,a):
     # generate a family of gabor wavelets with specified scales and rotations in space
-    psi = np.zeros((n,n,K,int(Q*S+1)),dtype=complex)
+    psi = np.zeros((n,n,2*K,int(Q*S+1)),dtype=complex)
     
     s = 0
     count = 0
@@ -94,7 +94,7 @@ def gabor_wavelet_freq_2d(n, sigma, zeta, eta, a,j,theta):
 
 def gabor_wavelet_family_freq_2d(n,K,S,Q,sigma, zeta, eta,a):
     # generate a family of gabor wavelets with specified scales and rotations in frequency
-    psi_hat = np.zeros((n,n,K,int(S*Q + 1)), dtype = complex)
+    psi_hat = np.zeros((n,n,2*K,int(S*Q + 1)), dtype = complex)
     s = 0
     count = 0
     while s <= S:
