@@ -3,6 +3,45 @@ import math
 import cmath
 pi = math.pi
 
+def radial_wavelet_freq_2d(m, n, l, j, a, sigma):
+    pi = math.pi
+    
+    omega1 = np.linspace(-pi, pi-(2*pi)/m, m)
+    omega2 = np.linspace(pi, -pi + (2*pi)/m, m)
+    
+    omega1,omega2 = np.meshgrid(omega1,omega2)
+    omega1 = a**j * omega1
+    omega2 = a**j * omega2
+    
+    lamb = np.sqrt(omega1**2 + omega2**2)
+    
+    alpha = np.zeros((m,m))
+    alpha[:, :int(m/2)] = np.arctan(omega2[:,:int(m/2)]  / omega1[:,:int(m/2)]) + pi
+    alpha[:, int(m/2+1):] = np.arctan(omega2[:,int(m/2+1):]  / omega1[:,int(m/2+1):])
+    alpha[int(m/2+1):, int(m/2+1):] = alpha[int(m/2+1):, int(m/2+1):] + 2*pi
+
+    alpha[:int(m/2), int(m/2)] = pi/2
+    alpha[int(m/2+1):, int(m/2)] = 3*pi/2
+    
+    psi_hat= np.zeros((m,m), dtype = complex)
+    psi_hat = (-1j)**l * np.exp(- sigma**2 * lamb**2 / 2) * lamb**(2*(n-1) - l) * np.exp(1j * l * alpha)
+
+    return psi_hat
+
+def radial_wavelet_family_freq_2d(m, N, J, Q, a, sigma):
+    psi_hat = np.zeros((m,m, int((N**2 + N)/2), int(J*Q + 1)), dtype = complex)
+    j = 0
+    countj = 0
+    while j <= J: 
+        countn = 0
+        for n in range(1, N + 1):
+            for l in range(n):
+                psi_hat[:,:, countn, countj] = radial_wavelet_freq_2d(m, n, l, j, a, sigma)
+                countn += 1
+        j += 1/Q
+        countj += 1
+    return psi_hat
+
 def gabor_wavelet_space_2d(n,sigma,zeta,eta,theta,a,m):
     # generate one gabor wavelet with specified scale and rotation in space
     x = np.arange(-n/2,n/2)
@@ -20,12 +59,15 @@ def gabor_wavelet_space_2d(n,sigma,zeta,eta,theta,a,m):
 
 def gabor_wavelet_family_space_2d(n,K,Q,S,sigma,zeta,eta,a):
     # generate a family of gabor wavelets with specified scales and rotations in space
-    psi = np.zeros((n,n,K,Q*S),dtype=complex)
+    psi = np.zeros((n,n,K,int(Q*S+1)),dtype=complex)
     
-    for s in range(S):
-        for q in range(Q):
-            for k in range(K):
-                psi[:, :, k, s*Q+q] = gabor_wavelet_space_2d(n,sigma,zeta,eta,k*math.pi/K,a,s+q/Q)
+    s = 0
+    count = 0
+    while s <= S:
+        for k in range(2*K):
+            psi[:, :, k, count] = gabor_wavelet_space_2d(n,sigma,zeta,eta,k*math.pi/K,a,s)
+        s = s + 1/Q
+        count += 1
     return psi
 
 
@@ -52,11 +94,14 @@ def gabor_wavelet_freq_2d(n, sigma, zeta, eta, a,j,theta):
 
 def gabor_wavelet_family_freq_2d(n,K,S,Q,sigma, zeta, eta,a):
     # generate a family of gabor wavelets with specified scales and rotations in frequency
-    psi_hat = np.zeros((n,n,K,S*Q), dtype = complex)
-    for s in range(S):
-        for q in range(Q):
-            for k in range(K):
-                psi_hat[:,:,k,s*Q+q] = gabor_wavelet_freq_2d(n,sigma,zeta,eta,a,s+q/Q,k*math.pi/K)
+    psi_hat = np.zeros((n,n,K,int(S*Q + 1)), dtype = complex)
+    s = 0
+    count = 0
+    while s <= S:
+        for k in range(2*K):
+            psi_hat[:,:,k,count] = gabor_wavelet_freq_2d(n,sigma,zeta,eta,a,s,k*math.pi/K)
+        s = s + 1/Q
+        count += 1
     return psi_hat
 
 def morlet_wavelet_space_2d(n, sigma, zeta, eta, theta, a, m):
@@ -84,7 +129,7 @@ def morlet_wavelet_space_2d(n, sigma, zeta, eta, theta, a, m):
     
     return psi
 
-def morlet_wavelet_family_space_2d(n,K,Q,S,sigma,zeta,eta,a):
+def morlet_wavelet_family_space_2d(n,K,Q,S,sigma,zeta,eta,a,cplx = False):
     # generate a family of morlet wavelets with specified scales and rotations in space
     # psi: [n, n,K, Q*S]
     # n: size of the wavelets should be n by n
@@ -96,7 +141,10 @@ def morlet_wavelet_family_space_2d(n,K,Q,S,sigma,zeta,eta,a):
     for k in range(K):
         for s in range(S):
             for q in range(Q):
-                psi[:, :,  k,s*Q+q] = morlet_wavelet_space_2d(n, sigma, zeta, eta, k*np.pi/K, a, s+q/Q)
+                if cplx:
+                    psi[:, :,  k,s*Q+q] = morlet_wavelet_space_2d(n, sigma, zeta, eta, 2*k*np.pi/K, a, s+q/Q)
+                else:
+                    psi[:, :,  k,s*Q+q] = morlet_wavelet_space_2d(n, sigma, zeta, eta, k*np.pi/K, a, s+q/Q)
     return psi
 
 def morlet_wavelet_freq_2d(n, sigma, zeta, eta, theta, a, m):
@@ -125,7 +173,7 @@ def morlet_wavelet_freq_2d(n, sigma, zeta, eta, theta, a, m):
 
     return psi_add
 
-def morlet_wavelet_family_freq_2d(n,K,Q,S,sigma,zeta,eta,a):
+def morlet_wavelet_family_freq_2d(n,K,Q,S,sigma,zeta,eta,a,cplx = False):
     # generate a family of morlet wavelets with specified scales and rotations in frequency
     # psi_hat: [n, n, K, Q*S]
     # n: size of the wavelets should be n by n
@@ -137,7 +185,10 @@ def morlet_wavelet_family_freq_2d(n,K,Q,S,sigma,zeta,eta,a):
     for k in range(K):
         for s in range(S):
             for q in range(Q):
-                psi_hat[:, :,  k,s*Q+q] = morlet_wavelet_freq_2d(n, sigma, zeta, eta, k*np.pi/K, a, s+q/Q)
+                if cplx:
+                    psi_hat[:, :,  k,s*Q+q] = morlet_wavelet_freq_2d(n, sigma, zeta, eta, 2*k*np.pi/K, a, s+q/Q)
+                else:
+                    psi_hat[:, :,  k,s*Q+q] = morlet_wavelet_freq_2d(n, sigma, zeta, eta, k*np.pi/K, a, s+q/Q)
     return psi_hat
 
 def wave_trans_in_space_2d(x, psi):
